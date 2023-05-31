@@ -6,7 +6,7 @@
 
 
 int main() {
-    system("start " "C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe" " -mw Macros\\testing.mac");
+    system("start " "C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe" " -mw " "C:\\PROGRA~1\\NIS-Elements2022\\Macros\\testing.mac");
 
     return 0;
 }
