@@ -1,0 +1,36 @@
+
+void openImg() {
+    char buf[1024], path[1024];
+    int retVal;
+
+    retVal = SelectFile(buf, "TIFF files (*.tif)|*.tif|", 0);
+    if (!checkReturnValue(retVal))
+		return;
+
+    strcpy(path, buf);
+	OpenStackedTiff(path, 1, 50.00, 2);
+	_Convert_ai();
+}
+
+void cleanup() {
+    ExportImagesToTIFF(0, "", "", "");
+	CloseCurrentDocument(2);
+}
+
+
+int checkReturnValue(int retVal) {
+	if (retVal == 0) {
+		Int_CreateTextWindow("Operation Canceled", 0, RGB(100,0,100), RGB(100,100,100), 100);
+		Wait(2);
+		Int_CloseTextWindow();
+		return 0;
+	}
+	if (retVal < 0) {
+		Int_CreateTextWindow("File not Found", 0, RGB(100,0,0), RGB(100,100,100), 100);
+		Wait(2);
+		Int_CloseTextWindow();
+		return 0;
+	}
+	
+	return 1;
+}

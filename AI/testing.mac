@@ -1,0 +1,40 @@
+//#include "G:\Loyola\Robia\keyPress.cpp"
+
+int main() {
+	char buf[1024], filePath[1024];
+	int retVal;
+	
+	buf = "L:\Paul_Bunyan\2023\";
+	retVal = SelectFile(buf, "TIFF files (*.tif)|*.tif|", 0);
+	
+	if (!checkReturnValue(retVal))
+		return FALSE;
+	
+	strcpy(filePath, buf);
+	OpenStackedTiff(filePath, 1, 50.00, 2);
+	_Convert_ai();
+	
+	//press enter to start operation
+	SupressDisplay();
+	
+	//ExportImagesToTIFF(0, "", "", "");
+	CloseCurrentDocument(QUERYSAVE_NO);
+}
+
+
+int checkReturnValue(int retVal) {
+	if (retVal == 0) {
+		Int_CreateTextWindow("Operation Canceled", 0, RGB(100,0,100), RGB_WHITE, 100);
+		Wait(2);
+		Int_CloseTextWindow();
+		return FALSE;
+	}
+	if (retVal < 0) {
+		Int_CreateTextWindow("File not Found", 0, RGB(100,0,0), RGB_WHITE, 100);
+		Wait(2);
+		Int_CloseTextWindow();
+		return FALSE;
+	}
+	
+	return TRUE;
+}

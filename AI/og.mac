@@ -1,0 +1,43 @@
+
+
+int main() {
+	char buf[1024], directory[1024], fileName[1024], filePath[1024];
+	int retVal;
+	
+	buf = "L:\Paul_Bunyan\2023";
+	retVal = Int_GetString("Directory Path", "Enter the directory path for conversion:", buf, 1024);
+	
+	if (checkReturnValue(retVal, "Operation Canceled")) {
+		strcpy(directory, buf);
+		strcat(directory, "\");
+		strcpy(filePath, directory);
+		
+		buf = "Brightfield.tif";
+		retVal = Int_GetString("File Name", "Enter the file name of the TIFF image to convert", buf, 1024);
+		
+		if (!checkReturnValue(retVal, "Operation Canceled"))
+			return FALSE;
+			
+		strcpy(fileName, buf);
+		strcat(filePath, fileName);
+		retVal = ExistFile(filePath);
+		
+		if (!checkReturnValue(retVal, "File not Found"))
+			return FALSE;
+			
+		OpenStackedTiff(filePath, 1, 50.00, 2);
+	}
+	
+}
+
+
+int checkReturnValue(int retVal, char *warning) {
+	if (retVal < 1) {
+		Int_CreateTextWindow(warning, 0, RGB(0,0,128), RGB_WHITE, 100);
+		Wait(2);
+		Int_CloseTextWindow();
+		return FALSE;
+	}
+	
+	return TRUE;
+}
