@@ -15,5 +15,5 @@ int main() {
 }
 
 openNIS() {
-    system("start C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe -m macros\\testing.mac");
+    system("start 'C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe -m Macros\\testing.mac'");
 }
