@@ -6,6 +6,13 @@
 
 
 int main() {
+    system("start " "C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe" " -mw Macros\\testing.mac");
+
+    return 0;
+}
+
+/*
+testing() {
     char dir[256] = "C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe";
     char args[256] = " -mw Macros\\testing.mac";
     char executable[256] = "";
@@ -15,6 +22,4 @@ int main() {
     strcat(executable, args);
 
     system(executable);
-
-    return 0;
-}
+}*/
