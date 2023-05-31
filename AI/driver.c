@@ -6,14 +6,15 @@
 
 
 int main() {
-    openNIS();
-    //openImg();
-    //pressEnter();
-    //cleanup();
+    char dir[256] = "C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe";
+    char args[256] = " -mw Macros\\testing.mac";
+    char executable[256] = "";
+
+    strcat(executable, "start ");
+    strcat(executable, dir);
+    strcat(executable, args);
+
+    system(executable);
 
     return 0;
-}
-
-openNIS() {
-    system("start 'C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe -m Macros\\testing.mac'");
 }
