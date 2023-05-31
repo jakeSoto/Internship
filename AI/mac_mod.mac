@@ -1,3 +1,7 @@
+void runMacro() {
+	runMacro("C:\\PROGRA~1\\NIS-Elements2022\\Macros\\testing.mac");
+}
+
 
 void openImg() {
     char buf[1024], path[1024];

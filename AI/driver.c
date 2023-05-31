@@ -1,13 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include "mac_mod.mac"
+#include "mac_mod.mac"
 //#include "keyPress.cpp"
 
 
 int main() {
     system("start " "C:\\PROGRA~1\\NIS-Elements2022\\nis_ar.exe" " -mw " "C:\\PROGRA~1\\NIS-Elements2022\\Macros\\testing.mac");
-
+    runMacro();
     return 0;
 }
 
