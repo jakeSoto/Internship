@@ -14,5 +14,5 @@ int main() {
 }
 
 openNIS() {
-    system("start C:\Program Files\NIS-Elements2022\nis_ar.exe");
+    system("start C:\\Program Files\\NIS-Elements2022\\nis_ar.exe");
 }
