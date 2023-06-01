@@ -1,15 +1,8 @@
-var path;
+var path = "";
 
-path = getDirectory("Choose output directory");
-/*
-createMask(path);
-step2(path);
-step3(path);
-step4(path);
-step5(path);
-step6(path);
-finalStep(path);
-*/
+path = getDirectory();
+
+
 
 // Functions
 function createMask(path) {
