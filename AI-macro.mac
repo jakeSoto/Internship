@@ -7,7 +7,7 @@ int main() {
 	retVal = SelectFile(buf, "TIFF files (*.tif)|*.tif|", 0);
 	
 	if (!checkReturnValue(retVal))
-		goto end;
+		return FALSE;		//stays in application
 	
 	strcpy(filePath, buf);
 	OpenStackedTiff(filePath, 1, 50.00, 2);
@@ -26,17 +26,20 @@ int main() {
 	char imjPath[256] = "$C:\\PROGRA~1\\$"
 	char imjMacro[256] = "$modified_AI.ijm$";
 
+	//set path in imj macro
+
+
 	strcat(inputTxt, imjPath);
 	strcat(inputTxt, " -batch ");
 	strcat(inputTxt, imjMacro);
-	StrExchangeChar(txt, 34, 36);	//Exchange dollars for qotation marks - ASCII codes: 36 = [$], 34 = ["]
+	StrExchangeChar(inputTxt, 34, 36);	//Exchange dollars for qotation marks - ASCII codes: 36 = [$], 34 = ["]
 
 
 	// execute ImageJ
 	WaitText(0, inputTxt);
 	Int_ExecProgramWait(inputTxt);	//Call the program and wait for it to finish
 	WaitText(0, "DONE");
-	goto end;
+	//goto end;
 
 	end:
 		ExitEx();
