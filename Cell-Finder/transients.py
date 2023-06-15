@@ -42,7 +42,7 @@ def LoadTimeData(fileName,
             clipy[0]:clipy[1], 
             clipx[0]:clipx[1]]
 
-  print("poop",np.shape(ar))
+  #print("poop",np.shape(ar))
       
 
   #timeReversed = True  # time isn't as first index, so shuffle
@@ -57,7 +57,6 @@ def LoadTimeData(fileName,
   if dim[1]!=dim[2]:
       print("WARNING: Array s.b. [t,x,y] - double check just in case") 
   print("Returning an array of size", ar.shape)
-
   return ar
 
 
@@ -84,7 +83,6 @@ def LoadStaticData(fileName,
             clipx[0]:clipx[1]
             ]
 
-  print("poop", np.shape(ar))
   print("Returning an array of size", ar.shape)
   return ar
 
