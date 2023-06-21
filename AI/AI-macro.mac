@@ -1,0 +1,64 @@
+
+int main() {
+	char buf[1024], filePath[1024];
+	int retVal;
+	
+	buf = "L:\Paul_Bunyan\2023\";
+	retVal = SelectFile(buf, "TIFF files (*.tif)|*.tif|", 0);
+	
+	if (!checkReturnValue(retVal))
+		return FALSE;		//stays in application
+	
+	strcpy(filePath, buf);
+	OpenStackedTiff(filePath, 1, 50.00, 2);
+	_Convert_ai();
+	
+	//press enter to start operation
+
+
+	// Export AI created image and save as a static filename
+	//ExportImagesToTIFF(0, "", "", "");
+	CloseCurrentDocument(QUERYSAVE_NO);
+
+
+	/* ImageJ (Fiji) processing */
+	char inputTxt[1024] = "";
+	char imjPath[256] = "$C:\\PROGRA~1\\$"
+	char imjMacro[256] = "$modified_AI.ijm$";
+
+	//set path in imj macro
+
+
+	strcat(inputTxt, imjPath);
+	strcat(inputTxt, " -batch ");
+	strcat(inputTxt, imjMacro);
+	StrExchangeChar(inputTxt, 34, 36);	//Exchange dollars for qotation marks - ASCII codes: 36 = [$], 34 = ["]
+
+
+	// execute ImageJ
+	WaitText(0, inputTxt);
+	Int_ExecProgramWait(inputTxt);	//Call the program and wait for it to finish
+	WaitText(0, "DONE");
+	//goto end;
+
+	end:
+		ExitEx();
+}
+
+
+int checkReturnValue(int retVal) {
+	if (retVal == 0) {
+		Int_CreateTextWindow("Operation Canceled", 0, RGB(100,0,100), RGB_WHITE, 100);
+		Wait(2);
+		Int_CloseTextWindow();
+		return FALSE;
+	}
+	if (retVal < 0) {
+		Int_CreateTextWindow("File not Found", 0, RGB(100,0,0), RGB_WHITE, 100);
+		Wait(2);
+		Int_CloseTextWindow();
+		return FALSE;
+	}
+	
+	return TRUE;
+}
