@@ -114,6 +114,27 @@ def exportData(sheet, dataSet, title, count):
             cell.value = item
 
 
+# Save cell segmenation img
+def saveCellImg(mask, path):
+    plt.figure(figsize=(20,10))
+    ax1 = plt.subplot(131)
+    ax1.set_title('Selected Cells')
+    ax1.imshow(mask)
+    labels=[]
+
+    for i in range(mask.shape[0]):
+        for j in range(mask.shape[1]):
+            if (mask[i][j] == 0):
+                continue
+            else:
+                if (mask[i][j] not in labels):
+                    labels.append(mask[i][j])
+                    ax1.text(j, i, int(mask[i][j]), ha="center", va="center", fontsize=12, fontweight='black', color='orange')
+
+    plt.savefig(path, bbox_inches='tight')
+
+
+
 def processTwoChannels(channels: dict) -> dict:
     # Channel references
     MCHERRY = channels['mCherry']
@@ -123,8 +144,9 @@ def processTwoChannels(channels: dict) -> dict:
             STATIC = channels[i]
 
     # Get masks
-    STATIC.mask = runCellpose(STATIC.raw, STATIC.fileName)
-    MCHERRY.mask = runCellpose(MCHERRY.raw[0], MCHERRY.fileName)
+    multiProcess(channels)
+    #STATIC.mask = runCellpose(STATIC.raw, STATIC.fileName)
+    #MCHERRY.mask = runCellpose(MCHERRY.raw[0], MCHERRY.fileName)
     
     # Convert masks to binary
     for key, channel in channels.items():
@@ -146,13 +168,11 @@ def processTwoChannels(channels: dict) -> dict:
 
     # Time series data
     traces, region_cells = transients.GetTraces(dataSet, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    traces = np.array(traces)
-    MCHERRY.traces = traces.T
+    MCHERRY.traces = traces
 
     # Static channel values
     traces, region_cells = transients.GetTraces(STATIC_values, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    traces = np.array(traces)
-    STATIC.traces = traces.T
+    STATIC.traces = traces
 
     return channels
 
