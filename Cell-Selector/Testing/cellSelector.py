@@ -1,6 +1,7 @@
 import time
 import helper
 import transients
+import numpy as np
 from openpyxl import Workbook
 
 
@@ -8,13 +9,12 @@ from openpyxl import Workbook
 def main():
     start_time = time.time()
     fileDict, dest = helper.searchDirectory()
+    img = str(dest + "/Cell_img_")
     dest += "/Cell_data.xlsx"
     channels = {}
     wb = Workbook()
-    #sheet = wb.active
 
     for i, folder in enumerate(fileDict):
-        # Multiprocess here
         if (fileDict[folder] == []):
             continue
         else:
@@ -31,8 +31,17 @@ def main():
         
         MCHERRY = channels['mCherry']
         normalized = helper.normalizeData(MCHERRY.traces)
-        helper.exportData(sheet, MCHERRY.traces, "Cell ", 1)
-        helper.exportData(sheet, normalized, "Norm ", 2)
+
+        # Transpose data for export
+        MCHERRY.traces = np.array(MCHERRY.traces)
+        normalized = np.array(normalized)
+        transposed_Traces = MCHERRY.traces.T
+        transposed_Norm = normalized.T
+
+        # Export data
+        helper.exportData(sheet, transposed_Traces, "Cell ", 1)
+        helper.exportData(sheet, transposed_Norm, "Norm ", 2)
+        helper.saveCellImg(MCHERRY.mask, (img + str(folder + ".png")))
 
     wb.save(dest)
     
