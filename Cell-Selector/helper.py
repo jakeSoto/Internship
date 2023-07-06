@@ -1,9 +1,11 @@
 import sys, os
 import numpy as np
-from tkinter.filedialog import askdirectory
 import matplotlib.pylab as plt
+from tkinter.filedialog import askdirectory
 from cellpose import models
+from multiprocessing import Pool
 import transients
+
 
 class container():
   def __init__(self, fileName,
@@ -26,12 +28,12 @@ class cellProp():
         self.area = area
 
 
+# Map folder names with file paths
 def searchDirectory() -> (dict, str):
     root = askdirectory(title = "Select folder containing N_ folders...")
     folderPaths = []
     fileMap = {}
 
-    # Map folder names with file paths
     for path, subdirs, files in os.walk(root):
         temp = []
         head, tail = os.path.split(path)
@@ -47,32 +49,54 @@ def searchDirectory() -> (dict, str):
     return (fileMap, root)
 
 
-# Creates a dictionary for channel container
-def createDict(fileNames: [str]) -> dict:
+# Map channel name to container object
+def createChannelDict(fileNames: [str]) -> dict:
     channelDict = {}
     
     for i, name in enumerate(fileNames):
         root, file = os.path.split(name)
-        fileName, ext = os.path.splitext(file)
-        if (fileName == "mCherry"):
+        title, ext = os.path.splitext(file)
+        if (title == "mCherry"):
             ar = transients.LoadTimeData(name, timeReversed = True)
         else:
             ar = transients.LoadStaticData(name, timeReversed = True)
-        channelDict[fileName] = container(fileName=file, index=i, raw=ar)
+
+        channelDict[title] = container(fileName=file, index=i, raw=ar)
 
     return channelDict
 
 
-# For use with multiprocessing pool
-def runCellpose(data, title):
+# Multi-procceses Cellpose with all channels
+def multiProcess(channelDict: dict) -> dict:
+    dataSet = []
+    titles = []
+
+    for channel in channelDict.values():
+        if (channel.fileName == "mCherry.tif"):
+            dataSet.append(channel.raw[0, :, :])
+        else:
+            dataSet.append(channel.raw)
+        titles.append(channel.fileName)
+
+    with Pool() as pool:
+        results = pool.map(runCellpose, dataSet)
+
+    for channel in channelDict.values():
+        channel.mask = results[channel.index]
+
+    return channelDict
+
+
+# Calls Cellpose function
+def runCellpose(data):
     model = models.Cellpose(gpu=True, model_type='cyto2')
-    print("Processing mask for: " + str(title))
+    print("Processing mask")
     masks, flows, styles, diams = model.eval(data, diameter=None, do_3D=False, )
     return masks
 
 
+# Get cell indices within image
 def getRegionCells(mask, cellCount) -> []:
-    # Cell indicies
     indices=[]
     areas=[]
     for i in range(1, cellCount+1):
@@ -91,6 +115,8 @@ def getRegionCells(mask, cellCount) -> []:
 
     return region_cells
 
+
+# Normalization Formula = (x - min) / (max - min)
 def normalizeData(dataSet): 
     normalized = [None] * len(dataSet)
 
@@ -103,8 +129,12 @@ def normalizeData(dataSet):
 
     return normalized
 
-# Export data list to xlsx sheet
+
+# Transposes data and exports to xlsx sheet
 def exportData(sheet, dataSet, title, count):
+    dataSet = np.array(dataSet)
+    dataSet = dataSet.T
+
     for i, sublist in enumerate(dataSet):
         for j, item in enumerate(sublist):
             header = sheet.cell(row = 1, column = (j*4)+count)
@@ -114,7 +144,7 @@ def exportData(sheet, dataSet, title, count):
             cell.value = item
 
 
-# Save cell segmenation img
+# Save cells segmenation img
 def saveCellImg(mask, path):
     plt.figure(figsize=(20,10))
     ax1 = plt.subplot(131)
@@ -134,9 +164,9 @@ def saveCellImg(mask, path):
     plt.savefig(path, bbox_inches='tight')
 
 
-
+# Runs program on two channels
 def processTwoChannels(channels: dict) -> dict:
-    # Channel references
+    # References
     MCHERRY = channels['mCherry']
     STATIC = None
     for i in channels:
@@ -144,9 +174,7 @@ def processTwoChannels(channels: dict) -> dict:
             STATIC = channels[i]
 
     # Get masks
-    multiProcess(channels)
-    #STATIC.mask = runCellpose(STATIC.raw, STATIC.fileName)
-    #MCHERRY.mask = runCellpose(MCHERRY.raw[0], MCHERRY.fileName)
+    channels = multiProcess(channels)
     
     # Convert masks to binary
     for key, channel in channels.items():
@@ -177,20 +205,46 @@ def processTwoChannels(channels: dict) -> dict:
     return channels
 
 
-
-def multiProcess(channelDict: dict) -> dict:
-    dataSet = []
-
-    for channel in channelDict.values():
-        if (channel.fileName == "mCherry.tif"):
-            dataSet.append(channel.raw[0])
+# Runs program on three channels
+def processThreeChannels(channels: dict) -> dict:
+    # References
+    MCHERRY = channels['mCherry']
+    
+    for i in channels:
+        if (channels[i] == MCHERRY):
+            continue
+        elif (channels[i].fileName == "CFP.tif"):
+            MEASURED = channels[i]
         else:
-            dataSet.append(channel.raw)
+            STATIC = channels[i]
+    
+    # Get masks
+    channels = multiProcess(channels)
 
-    with Pool() as pool:
-        results = pool.map(runCellpose, dataSet)
+    # Convert masks to binary
+    for key, channel in channels.items():
+        channel.binaryMask = np.zeros_like(channel.mask, int)
+        channel.binaryMask[channel.mask > 0] = 1
 
-    for channel in channelDict.values():
-        channel.mask = results[channel.index]
+    # Select cells
+    combo_BinaryMask = STATIC.binaryMask + MEASURED.binaryMask + MCHERRY.binaryMask
+    MCHERRY.mask = runCellpose(combo_BinaryMask)
 
-    return channelDict
+    final_BinaryMask = np.zeros_like(MCHERRY.mask, int)
+    final_BinaryMask[MCHERRY.mask > 0] = 1
+
+    dataSet = final_BinaryMask * MCHERRY.raw
+    MEASURED_values = final_BinaryMask * MEASURED.raw
+    cellCount = np.max(final_BinaryMask * MCHERRY.mask)
+
+    MCHERRY.region_cells = getRegionCells(MCHERRY.mask, cellCount)
+
+    # Time series data
+    traces, region_cells = transients.GetTraces(dataSet, final_BinaryMask, region_cells=MCHERRY.region_cells)
+    MCHERRY.traces = traces
+
+    # Static channel values
+    traces, region_cells = transients.GetTraces(MEASURED_values, final_BinaryMask, region_cells=MCHERRY.region_cells)
+    MEASURED.traces = traces
+
+    return channels
