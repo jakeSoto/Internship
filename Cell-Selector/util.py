@@ -13,11 +13,7 @@ class empty:
 root = "myoimages/"
 thisFileRoot = '/'.join(os.path.realpath(__file__).split('/')[:-1])
 
-###################################################################################################
-###
-### Functions for Convenience
-###
-###################################################################################################
+
 def myplot(img,fileName=None,clim=None):
   plt.axis('equal')
   plt.pcolormesh(img, cmap='gray')
@@ -78,11 +74,7 @@ def ReadImg(
   
   return img 
 
-###################################################################################################
-###
-### Functions for Image Manipulation
-###
-###################################################################################################
+
 def renorm(img,scale=255):
     img = img-np.min(img)
     img/= np.max(img)
