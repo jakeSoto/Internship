@@ -1,6 +1,3 @@
-"""
-Routines for isolating cells and recording transients 
-"""
 import os
 import util
 import scipy
