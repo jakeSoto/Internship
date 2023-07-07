@@ -1,3 +1,4 @@
+import os
 import time
 import helper
 from openpyxl import Workbook
@@ -5,19 +6,19 @@ from openpyxl import Workbook
 
 def main():
     start_time = time.time()
-    fileDict, dest = helper.searchDirectory()
-    img = str(dest + "/Cell_img_")
-    dest += "/Cell_data.xlsx"
+    folderDict, dest = helper.searchDirectory()
+    imgRoot = os.path.join(dest, "Cells_")
+    dest = os.path.join(dest, "Cell_Data.xlsx")
     channels = {}
     wb = Workbook()
 
-    for i, folder in enumerate(fileDict):
-        if (fileDict[folder] == []):
+    for i, folder in enumerate(folderDict):
+        if (folderDict[folder] == []):
             continue
 
-        # Get container object for channels in folder
+        # Get container objects for channels in each folder
         else:
-            channels = helper.createChannelDict(fileDict[folder])
+            channels = helper.createChannelDict(folderDict[folder])
             sheet = wb.create_sheet(folder, i)
 
         # 2 Channels
@@ -34,15 +35,16 @@ def main():
         # Export data
         helper.exportData(sheet, MCHERRY.traces, "Cell ", 1)
         helper.exportData(sheet, normalized, "Norm ", 2)
-        helper.saveCellImg(MCHERRY.mask, (img + str(folder + ".png")))
+
+        imgName = imgRoot + str(folder) + ".png"
+        helper.saveCellImg(MCHERRY.mask, (imgRoot + imgName))
 
     wb.save(dest)
     end_time = time.time()
     total_time = (end_time - start_time) / 60
     print("Done, results save to: " + str(dest))
-    print("Execution time: " + str(round(total_time)) + " minutes")
+    print("Execution time: " + str(round(total_time, 1)) + " minutes")
 
 
 if __name__ == "__main__":
     main()
-
