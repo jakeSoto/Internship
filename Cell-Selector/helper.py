@@ -1,5 +1,6 @@
 import sys, os
 import numpy as np
+import tkinter as tk
 import matplotlib.pylab as plt
 from tkinter.filedialog import askdirectory
 from cellpose import models
@@ -30,7 +31,16 @@ class cellProp():
 
 # Map folder names with file paths
 def searchDirectory() -> (dict, str):
+    window = tk.Tk()
+    window.wm_attributes('-topmost', 1)
+    window.withdraw()
     root = askdirectory(title = "Select folder containing N_ folders...")
+    if (not root):
+        print("Operation cancelled")
+        exit(1)
+    else:
+        root = os.path.realpath(root)
+    
     folderPaths = []
     fileMap = {}
 
@@ -41,7 +51,7 @@ def searchDirectory() -> (dict, str):
         for file in files:
             ext = os.path.splitext(file)[-1].lower()
             if (ext == ".tif"):
-                filePath = (head + "/" + tail + "/" + file)
+                filePath = os.path.realpath(os.path.join(path, file))
                 temp.append(filePath)
             
         fileMap[tail] = temp
@@ -69,14 +79,12 @@ def createChannelDict(fileNames: [str]) -> dict:
 # Multi-procceses Cellpose with all channels
 def multiProcess(channelDict: dict) -> dict:
     dataSet = []
-    titles = []
 
     for channel in channelDict.values():
         if (channel.fileName == "mCherry.tif"):
             dataSet.append(channel.raw[0, :, :])
         else:
             dataSet.append(channel.raw)
-        titles.append(channel.fileName)
 
     with Pool() as pool:
         results = pool.map(runCellpose, dataSet)
@@ -88,17 +96,18 @@ def multiProcess(channelDict: dict) -> dict:
 
 
 # Calls Cellpose function
-def runCellpose(data):
+def runCellpose(data) -> []:
     model = models.Cellpose(gpu=True, model_type='cyto2')
     print("Processing mask")
-    masks, flows, styles, diams = model.eval(data, diameter=None, do_3D=False, )
+    masks, flows, styles, diams = model.eval(data, diameter=None, do_3D=False)
     return masks
 
 
 # Get cell indices within image
 def getRegionCells(mask, cellCount) -> []:
-    indices=[]
-    areas=[]
+    indices = []
+    areas = []
+
     for i in range(1, cellCount+1):
         index = np.argwhere(mask == i)
         area = len(index)
@@ -117,7 +126,7 @@ def getRegionCells(mask, cellCount) -> []:
 
 
 # Normalization Formula = (x - min) / (max - min)
-def normalizeData(dataSet): 
+def normalizeData(dataSet) -> []: 
     normalized = [None] * len(dataSet)
 
     for i in range(len(dataSet)):
@@ -183,7 +192,7 @@ def processTwoChannels(channels: dict) -> dict:
 
     # Select cells
     combo_BinaryMask = STATIC.binaryMask + MCHERRY.binaryMask
-    MCHERRY.mask = runCellpose(combo_BinaryMask, "Data Set")
+    MCHERRY.mask = runCellpose(combo_BinaryMask)
 
     final_BinaryMask = np.zeros_like(MCHERRY.mask, int)
     final_BinaryMask[MCHERRY.mask > 0] = 1
