@@ -215,7 +215,7 @@ def processTwoChannels(channels: dict) -> dict:
 
 
 # Runs program on three channels
-def processThreeChannels(channels: dict) -> dict:
+def processThreeChannels(channels: dict) -> (dict, container):
     # References
     MCHERRY = channels['mCherry']
     
@@ -256,4 +256,4 @@ def processThreeChannels(channels: dict) -> dict:
     traces, region_cells = transients.GetTraces(MEASURED_values, final_BinaryMask, region_cells=MCHERRY.region_cells)
     MEASURED.traces = traces
 
-    return channels
+    return channels, MEASURED
