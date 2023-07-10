@@ -1,5 +1,4 @@
-import os
-import time
+import os, time
 import helper
 from openpyxl import Workbook
 
@@ -10,6 +9,7 @@ def main():
     imgRoot = os.path.join(dest, "Cells_")
     dest = os.path.join(dest, "Cell_Data.xlsx")
     channels = {}
+    measuredChan = None
     wb = Workbook()
 
     for i, folder in enumerate(folderDict):
@@ -27,7 +27,7 @@ def main():
 
         # 3 Channels
         else:
-            channels = helper.processThreeChannels(channels)
+            channels, measuredChan = helper.processThreeChannels(channels)
 
         MCHERRY = channels['mCherry']
         normalized = helper.normalizeData(MCHERRY.traces)
@@ -35,6 +35,16 @@ def main():
         # Export data
         helper.exportData(sheet, MCHERRY.traces, "Cell ", 1)
         helper.exportData(sheet, normalized, "Norm ", 2)
+
+        if (measuredChan != None):
+            for i, value in enumerate(measuredChan.traces):
+                header = sheet.cell(row = 1, column = (j*4)+3)
+                header.value = (str("CFP ") + str(j+1))
+
+                cell = sheet.cell(row = i+2, column = (j*4)+3)
+                cell.value = value
+            
+            measuredChan = None
 
         imgName = imgRoot + str(folder) + ".png"
         helper.saveCellImg(MCHERRY.mask, (imgRoot + imgName))
