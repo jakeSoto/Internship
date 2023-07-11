@@ -2,6 +2,7 @@ import sys, os
 import numpy as np
 import tkinter as tk
 import matplotlib.pylab as plt
+from tkinter import filedialog
 from tkinter.filedialog import askdirectory
 from cellpose import models
 from multiprocessing import Pool
@@ -11,10 +12,10 @@ import transients
 class container():
   def __init__(self, fileName,
                     index = None,
-                    raw = None,   # array of data
-                    mask = None,  # array of cells locations
+                    raw = None,         # array of data
+                    mask = None,        # array of cells locations
                     binaryMask = None,  # binary array of cells within the img
-                    traces = None
+                    traces = None       # array of cell value traces
                     ):
     self.fileName = fileName
     self.index = index
@@ -57,6 +58,30 @@ def searchDirectory() -> (dict, str):
         fileMap[tail] = temp
 
     return (fileMap, root)
+
+
+def measuredChannel(folderDict) -> str:
+    print("Select the channel to measure")
+    window = tk.Tk()
+    window.wm_attributes('-topmost', 1)
+    window.withdraw()
+    targetFile = filedialog.askopenfile(title="Select the channel to measure...", filetypes=(('tif files','*.tif'), ('All files', '*,*')))
+    if (not targetFile):
+        print("Operation cancelled")
+        exit(1)
+    else:
+        targetPath = os.path.realpath(targetFile.name)
+
+    channelRef = None
+
+    for i, files in folderDict.items():
+        for file in files:
+            if (file == targetPath):
+                root, fileName = os.path.split(file)
+                channelName, ext = os.path.splitext(fileName)
+                channelRef = channelName
+
+    return channelRef
 
 
 # Map channel name to container object
@@ -155,7 +180,7 @@ def exportData(sheet, dataSet, title, count):
 
 # Save cells segmenation img
 def saveCellImg(mask, path):
-    plt.figure(figsize=(20,10))
+    plt.figure(figsize=(60,30))
     ax1 = plt.subplot(131)
     ax1.set_title('Selected Cells')
     ax1.imshow(mask)
@@ -174,13 +199,10 @@ def saveCellImg(mask, path):
 
 
 # Runs program on two channels
-def processTwoChannels(channels: dict) -> dict:
+def processTwoChannels(channels: dict, measuredName: str) -> dict:
     # References
     MCHERRY = channels['mCherry']
-    STATIC = None
-    for i in channels:
-        if (channels[i] != MCHERRY):
-            STATIC = channels[i]
+    STATIC = channels[measuredName]
 
     # Get masks
     channels = multiProcess(channels)
@@ -215,18 +237,16 @@ def processTwoChannels(channels: dict) -> dict:
 
 
 # Runs program on three channels
-def processThreeChannels(channels: dict) -> (dict, container):
-    # References
-    MCHERRY = channels['mCherry']
-    
+def processThreeChannels(channels: dict, measuredName: str) -> dict:
+    # References    
     for i in channels:
-        if (channels[i] == MCHERRY):
-            continue
-        elif (channels[i].fileName == "CFP.tif"):
+        if (i == 'mCherry'):
+            MCHERRY = channels[i]
+        elif (i == measuredName):
             MEASURED = channels[i]
         else:
             STATIC = channels[i]
-    
+        
     # Get masks
     channels = multiProcess(channels)
 
@@ -256,4 +276,4 @@ def processThreeChannels(channels: dict) -> (dict, container):
     traces, region_cells = transients.GetTraces(MEASURED_values, final_BinaryMask, region_cells=MCHERRY.region_cells)
     MEASURED.traces = traces
 
-    return channels, MEASURED
+    return channels
