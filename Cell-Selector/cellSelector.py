@@ -6,10 +6,12 @@ from openpyxl import Workbook
 def main():
     start_time = time.time()
     folderDict, dest = helper.searchDirectory()
+    measuredName = helper.measuredChannel(folderDict)
+    print("Measuring the " + str(measuredName) + " channel")
+
     imgRoot = os.path.join(dest, "Cells_")
     dest = os.path.join(dest, "Cell_Data.xlsx")
     channels = {}
-    measuredChan = None
     wb = Workbook()
 
     for i, folder in enumerate(folderDict):
@@ -23,31 +25,30 @@ def main():
 
         # 2 Channels
         if (len(channels) < 3):
-            channels = helper.processTwoChannels(channels)
+            channels = helper.processTwoChannels(channels, measuredName)
 
         # 3 Channels
         else:
-            channels, measuredChan = helper.processThreeChannels(channels)
+            channels = helper.processThreeChannels(channels, measuredName)
 
         MCHERRY = channels['mCherry']
+        MEASURED = channels[measuredName]
         normalized = helper.normalizeData(MCHERRY.traces)
 
         # Export data
         helper.exportData(sheet, MCHERRY.traces, "Cell ", 1)
         helper.exportData(sheet, normalized, "Norm ", 2)
 
-        if (measuredChan != None):
-            for i, value in enumerate(measuredChan.traces):
-                header = sheet.cell(row = 1, column = (j*4)+3)
-                header.value = (str("CFP ") + str(j+1))
+        for i, value in enumerate(MEASURED.traces):
+            header = sheet.cell(row = 1, column = (i*4)+3)
+            header.value = (measuredName + " " + str(i+1))
 
-                cell = sheet.cell(row = i+2, column = (j*4)+3)
-                cell.value = value
-            
-            measuredChan = None
+            cell = sheet.cell(row = 2, column = (i*4)+3)
+            cell.value = value
+
 
         imgName = imgRoot + str(folder) + ".png"
-        helper.saveCellImg(MCHERRY.mask, (imgRoot + imgName))
+        helper.saveCellImg(MCHERRY.mask, imgName)
 
     wb.save(dest)
     end_time = time.time()
