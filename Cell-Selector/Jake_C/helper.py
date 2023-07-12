@@ -187,10 +187,15 @@ def saveCellImg(mask, path):
 
 
 # Runs program on two channels
-def processTwoChannels(channels: dict, measuredName: str) -> dict:
+def processTwoChannels(channels: dict) -> dict:
     # References
-    MCHERRY = channels['mCherry']
-    STATIC = channels[measuredName]
+    for i in channels:
+        if (i == 'mCherry'):
+            MCHERRY = channels[i]
+        else:
+            STATIC = channels[i]
+
+        channels[i].name = i
 
     # Get masks
     channels = multiProcess(channels)
@@ -225,28 +230,25 @@ def processTwoChannels(channels: dict, measuredName: str) -> dict:
 
 
 # Runs program on three channels
-def processThreeChannels(channels: dict, measuredName: str) -> (dict, container):
+def processThreeChannels(channels: dict) -> dict:
     # References    
     for i in channels:
         if (i == 'mCherry'):
             MCHERRY = channels[i]
-        elif (i == measuredName):
-            MEASURED = channels[i]
-        else:
-            STATIC = channels[i]
 
         channels[i].name = i
-        
+
     # Get masks
     channels = multiProcess(channels)
 
+    combo_BinaryMask = None
     # Convert masks to binary
     for key, channel in channels.items():
         channel.binaryMask = np.zeros_like(channel.mask, int)
         channel.binaryMask[channel.mask > 0] = 1
+        combo_BinaryMask += channel.binaryMask
 
     # Select cells
-    combo_BinaryMask = STATIC.binaryMask + MEASURED.binaryMask + MCHERRY.binaryMask
     MCHERRY.mask = runCellpose(combo_BinaryMask)
 
     final_BinaryMask = np.zeros_like(MCHERRY.mask, int)
@@ -256,9 +258,7 @@ def processThreeChannels(channels: dict, measuredName: str) -> (dict, container)
         channel.dataSet = final_BinaryMask * channel.raw
 
     cellCount = np.max(final_BinaryMask * MCHERRY.mask)
-
     MCHERRY.region_cells = getRegionCells(MCHERRY.mask, cellCount)
-
 
     for key, channel in channels.items():
         traces, region_cells = transients.GetTraces(channel.dataSet, final_BinaryMask, region_cells=MCHERRY.region_cells)
