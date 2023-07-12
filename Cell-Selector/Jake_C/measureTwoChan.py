@@ -23,19 +23,16 @@ def main():
 
         # 2 Channels
         if (len(channels) < 3):
-            channels = helper.processTwoChannels(channels, measuredName)
+            channels = helper.processTwoChannels(channels)
 
         # 3 Channels
         else:
-            channels = helper.processThreeChannels(channels, measuredName)
+            channels = helper.processThreeChannels(channels)
 
         MCHERRY = channels['mCherry']
         normalized = helper.normalizeData(MCHERRY.traces)
 
         # Export data
-        helper.exportData(sheet, normalized, "Norm ", 3)
-        helper.exportData(sheet, MCHERRY.traces, "Cell ", 4)
-
         temp_counter = 1
         for key, channel in channels.items():
             if (key == "mCherry"):
@@ -45,6 +42,8 @@ def main():
                 temp_counter += 1
         temp_counter = 0
 
+        helper.exportData(sheet, normalized, "Norm ", 3)
+        helper.exportData(sheet, MCHERRY.traces, "Cell ", 4)
 
         imgName = imgRoot + str(folder) + ".png"
         helper.saveCellImg(MCHERRY.mask, imgName)
