@@ -184,7 +184,6 @@ def exportData(sheet, dataSet, title, count):
     for i, sublist in enumerate(dataSet):
         for j, item in enumerate(sublist):
             header = sheet.cell(row = 1, column = (j*6)+count)
-            col = sheet.cell(column = (j*6)+count)
             header.value = (str(title) + str(j+1))
 
             cell = sheet.cell(row = i+2, column = (j*6)+count)
