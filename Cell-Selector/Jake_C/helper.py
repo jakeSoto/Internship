@@ -241,8 +241,9 @@ def processThreeChannels(channels: dict) -> dict:
     # Get masks
     channels = multiProcess(channels)
 
-    combo_BinaryMask = None
     # Convert masks to binary
+    combo_BinaryMask = np.zeros_like(MCHERRY.mask, int)
+    
     for key, channel in channels.items():
         channel.binaryMask = np.zeros_like(channel.mask, int)
         channel.binaryMask[channel.mask > 0] = 1
