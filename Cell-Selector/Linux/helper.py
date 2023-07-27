@@ -15,14 +15,21 @@ class container():
                     raw = None,         # array of data
                     mask = None,        # array of cells locations
                     binaryMask = None,  # binary array of cells within the img
-                    traces = None       # array of cell value traces
+                    data = None,
+                    cellCount = None,   # number of cells
+                    traces = None,      # array of cell value traces
+                    region_cells = None
                     ):
     self.fileName = fileName
     self.index = index
     self.raw = raw
     self.mask = mask
     self.binaryMask = binaryMask
+    self.data = data
+    self.cellCount = cellCount
     self.traces = traces
+    self.region_cells = region_cells
+
 
 class cellProp():
     def __init__(self, coords=None, area=None):
@@ -190,47 +197,21 @@ def exportData(sheet, dataSet, title, count):
             cell.value = item
 
 
-
 # Runs program on two channels
 def processTwoChannels(channels: dict) -> dict:
-    # References
-    CHAN1 = None
-    CHAN2 = None
-
     # Get masks
     channels = multiProcess(channels)
-    
-    # Convert masks to binary
+
+    # Process data
     for key, channel in channels.items():
         channel.binaryMask = np.zeros_like(channel.mask, int)
         channel.binaryMask[channel.mask > 0] = 1
-        if (CHAN1 == None):
-            CHAN1 = channels[key]
-        else:
-            CHAN2 = channels[key]
 
+        channel.data = channel.binaryMask * channel.raw
+        channel.cellCount = np.max(channel.binaryMask * channel.mask)
 
-    # Select cells
-    combo_BinaryMask = CHAN1.binaryMask + CHAN2.binaryMask
-    CHAN1.mask = runCellpose(combo_BinaryMask)
-    CHAN2.mask = CHAN1.mask
-
-    final_BinaryMask = np.zeros_like(CHAN1.mask, int)
-    final_BinaryMask[CHAN1.mask > 0] = 1
-
-    dataSet1 = final_BinaryMask * CHAN1.raw
-    dataSet2 = final_BinaryMask * CHAN2.raw
-    cellCount = np.max(final_BinaryMask * CHAN1.mask)
-
-    CHAN1.region_cells = getRegionCells(CHAN1.mask, cellCount)
-
-    # Time series data
-    traces, region_cells = transients.GetTraces(dataSet1, final_BinaryMask, region_cells=CHAN1.region_cells)
-    CHAN1.traces = traces
-
-    traces, region_cells = transients.GetTraces(dataSet2, final_BinaryMask, region_cells=CHAN1.region_cells)
-    CHAN2.traces = traces
+        channel.region_cells = getRegionCells(channel.mask, channel.cellCount)
+        traces, region_cells_master = transients.GetTraces(channel.data, channel.binaryMask, region_cells=channel.region_cells)
+        channel.traces = traces
 
     return channels
-
-
