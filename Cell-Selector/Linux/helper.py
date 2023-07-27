@@ -119,6 +119,19 @@ def getRegionCells(mask, cellCount) -> []:
 
     return region_cells
 
+# Normalization Formula = (x - min) / (max - min)
+def normalizeData(dataSet) -> []: 
+    normalized = [None] * len(dataSet)
+
+    for i in range(len(dataSet)):
+        trace = dataSet[i]
+        minVal = np.min(trace)
+        maxVal = np.max(trace)
+        norm = (trace - minVal) / (maxVal - minVal)
+        normalized[i] = norm
+
+    return normalized
+
 
 def transposeData(dataSet) -> []:
     dataSet = np.array(dataSet)
