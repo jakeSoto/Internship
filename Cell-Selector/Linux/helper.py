@@ -173,7 +173,7 @@ def saveTraces(traces, path):
         
     for i in range(nTrace):
         trace = traces[i]
-        ax.plot(ts[start:end+1], trace[start:end+1])
+        ax.plot(ts[start:end+1], trace[start:end+1], color='orange', alpha=0.4)
         
     plt.tight_layout()
     plt.savefig(path, bbox_inches='tight')
