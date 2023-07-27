@@ -159,7 +159,7 @@ def saveCellImg(mask, path):
     plt.savefig(path, bbox_inches='tight')
 
 
-def saveTraces(traces, path):
+def saveTraces(traces, name, path):
     nTrace = len(traces)
     nTimePts = len(traces[0])
     frameRate = 25      #sec/frame 
@@ -169,7 +169,7 @@ def saveTraces(traces, path):
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.set_title("Trace")
+    ax.set_title(str(name))
         
     for i in range(nTrace):
         trace = traces[i]
@@ -213,6 +213,7 @@ def processTwoChannels(channels: dict) -> dict:
     # Select cells
     combo_BinaryMask = CHAN1.binaryMask + CHAN2.binaryMask
     CHAN1.mask = runCellpose(combo_BinaryMask)
+    CHAN2.mask = CHAN1.mask
 
     final_BinaryMask = np.zeros_like(CHAN1.mask, int)
     final_BinaryMask[CHAN1.mask > 0] = 1

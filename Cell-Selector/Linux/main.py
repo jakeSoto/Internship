@@ -31,15 +31,15 @@ def main():
 
         # Export data
         for i, channel in enumerate(channels):
-            print("Here")
-            #imgName = imgRoot + str(channel) + ".png"
+            imgName = imgRoot + str(channel) + ".png"
             traceName = traceRoot + str(channel) + ".png"
 
             normalized = helper.normalizeData(channels[channel].traces)
             dataSet = helper.transposeData(channels[channel].traces)
-            #helper.saveCellImg(channels[channel].mask, imgName)
-            helper.saveTraces(normalized, traceName)
-            helper.exportData(sheet, dataSet, ("Channel"+str(i+1)+" "), i+1)
+            helper.saveCellImg(channels[channel].mask, imgName)
+            name = "Channel " + str(i+1) + " "
+            helper.saveTraces(normalized, name, traceName)
+            helper.exportData(sheet, dataSet, name, i+1)
 
 
     wb.save(dest)
