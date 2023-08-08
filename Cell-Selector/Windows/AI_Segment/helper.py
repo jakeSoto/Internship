@@ -201,45 +201,8 @@ def saveCellImg(mask, path):
     plt.savefig(path, bbox_inches='tight')
 
 
-# Runs program on two channels
-def processTwoChannels(channels: dict, measuredName: str) -> dict:
-    # References
-    MCHERRY = channels['mCherry']
-    STATIC = channels[measuredName]
 
-    # Get masks
-    channels = multiProcess(channels)
-    
-    # Convert masks to binary
-    for key, channel in channels.items():
-        channel.binaryMask = np.zeros_like(channel.mask, int)
-        channel.binaryMask[channel.mask > 0] = 1
-
-    # Select cells
-    combo_BinaryMask = STATIC.binaryMask + MCHERRY.binaryMask
-    MCHERRY.mask = runCellpose(combo_BinaryMask)
-
-    final_BinaryMask = np.zeros_like(MCHERRY.mask, int)
-    final_BinaryMask[MCHERRY.mask > 0] = 1
-
-    dataSet = final_BinaryMask * MCHERRY.raw
-    STATIC_values = final_BinaryMask * STATIC.raw
-    cellCount = np.max(final_BinaryMask * MCHERRY.mask)
-
-    MCHERRY.region_cells = getRegionCells(MCHERRY.mask, cellCount)
-
-    # Time series data
-    traces, region_cells = transients.GetTraces(dataSet, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    MCHERRY.traces = traces
-
-    # Static channel values
-    traces, region_cells = transients.GetTraces(STATIC_values, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    STATIC.traces = traces
-
-    return channels
-
-
-# Runs program on three channels
+# Runs program on * channels
 def processChannels(channels: dict, dest: str) -> dict:
     # Get masks
     channels = multiProcess(channels)
