@@ -5,19 +5,12 @@ from openpyxl import Workbook
 
 def main():
     start_time = time.time()
-    folderDict, dest = helper.searchDirectory()
+    
+    filePath, dest = helper.getFile()
     tifDest = os.path.join(dest, "segment.tif")
-    channels = {}
 
-    for i, folder in enumerate(folderDict):
-        if (folderDict[folder] == []):
-            continue
-
-        # Get container objects for channels in each folder
-        else:
-            channels = helper.createChannelDict(folderDict[folder])
-
-        channels = helper.processChannels(channels, tifDest)
+    channel = helper.createChannelContainer(filePath)
+    channel = helper.processChannelData(channel, tifDest)
 
     end_time = time.time()
     total_time = (end_time - start_time) / 60
