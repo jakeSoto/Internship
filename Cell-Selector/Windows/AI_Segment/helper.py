@@ -3,9 +3,9 @@ import tifffile
 import numpy as np
 import tkinter as tk
 import matplotlib.pylab as plt
+import multiprocessing.dummy as mp
 from tkinter import filedialog
 from cellpose import models
-from multiprocessing import Pool
 import transients
 
 
@@ -100,11 +100,10 @@ def runCellpose(data) -> []:
 # Runs program on two channels
 def processChannelData(channel: container, dest: str) -> dict:
     # Get masks
-    channel = multiProcess(channel)
+    channel = multiThread(channel)
 
     # Process data
     length = len(channel.mask)
-    print(length)
     for i in range(length):
         dataSet = channel.mask[i]
 
@@ -116,6 +115,7 @@ def processChannelData(channel: container, dest: str) -> dict:
         data = channel.binaryMask * channel.raw
 
         # Export
+        print("Exporting mask: "+str(i+1)+"/"+str(length))
         tifffile.imwrite(dest, data, metadata={'axes': 'TZYX', 'TimeIncrement': i/length})
 
     return channel

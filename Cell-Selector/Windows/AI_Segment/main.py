@@ -1,6 +1,5 @@
 import os, time
 import helper
-from openpyxl import Workbook
 
 
 def main():
