@@ -10,19 +10,28 @@ import transients
 
 
 class container():
-  def __init__(self, fileName,
+    def __init__(self, fileName,
                     index = None,
-                    raw = None,         # array of data
-                    mask = None,        # array of cells locations
+                    static = False,
+                    raw = None,         # array of raw flourescence data
+                    mask = None,        # array of cells locations of raw data
                     binaryMask = None,  # binary array of cells within the img
-                    traces = None       # array of cell value traces
+                    data = None,        # array of raw data from selected cells
+                    cellCount = None,   # number of cells
+                    traces = None,      # array of timeseries flourescence traces
+                    region_cells = None # array of cell indices
                     ):
-    self.fileName = fileName
-    self.index = index
-    self.raw = raw
-    self.mask = mask
-    self.binaryMask = binaryMask
-    self.traces = traces
+        self.fileName = fileName
+        self.index = index
+        self.static = static
+        self.raw = raw
+        self.mask = mask
+        self.binaryMask = binaryMask
+        self.data = data
+        self.cellCount = cellCount
+        self.traces = traces
+        self.region_cells = region_cells
+
 
 class cellProp():
     def __init__(self, coords=None, area=None):
@@ -30,84 +39,58 @@ class cellProp():
         self.area = area
 
 
-# Map folder names with file paths
-def searchDirectory() -> (dict, str):
+# Map file names with file paths
+def getFiles() -> (dict, str):
     window = tk.Tk()
     window.wm_attributes('-topmost', 1)
     window.withdraw()
-    root = askdirectory(title = "Select folder containing N_ folders...")
+    root = filedialog.askopenfilenames(title="Choose files to analyze...", filetypes=[('Tiff Files', '*.tif')])
     if (not root):
         print("Operation cancelled")
         exit(1)
     else:
-        root = os.path.realpath(root)
-    
-    folderPaths = []
-    fileMap = {}
+        fileMap = {}
+        for i in range(len(root)):
+            path = os.path.realpath(root[i])
+            head, tail = os.path.split(root[i])
+            head = os.path.realpath(head)
+            fileName, ext = os.path.splitext(tail)
+            fileMap[fileName] = path
 
-    for path, subdirs, files in os.walk(root):
-        temp = []
-        head, tail = os.path.split(path)
-
-        for file in files:
-            ext = os.path.splitext(file)[-1].lower()
-            if (ext == ".tif"):
-                filePath = os.path.realpath(os.path.join(path, file))
-                temp.append(filePath)
-            
-        fileMap[tail] = temp
-
-    return (fileMap, root)
+    return (fileMap, head)
 
 
-def measuredChannel(folderDict) -> str:
-    print("Select the channel to measure")
-    window = tk.Tk()
-    window.wm_attributes('-topmost', 1)
-    window.withdraw()
-    targetFile = filedialog.askopenfile(title="Select the channel to measure...", filetypes=(('tif files','*.tif'), ('All files', '*,*')))
-    if (not targetFile):
-        print("Operation cancelled")
-        exit(1)
-    else:
-        targetPath = os.path.realpath(targetFile.name)
-
-    channelRef = None
-
-    for i, files in folderDict.items():
-        for file in files:
-            if (file == targetPath):
-                root, fileName = os.path.split(file)
-                channelName, ext = os.path.splitext(fileName)
-                channelRef = channelName
-
-    return channelRef
-
-
-# Map channel name to container object
-def createChannelDict(fileNames: [str]) -> dict:
+# Map file name to container object
+def createChannelDict(fileDict: dict) -> dict:
     channelDict = {}
     
-    for i, name in enumerate(fileNames):
-        root, file = os.path.split(name)
-        title, ext = os.path.splitext(file)
-        if (title == "mCherry"):
-            ar = transients.LoadTimeData(name, timeReversed = True)
-        else:
-            ar = transients.LoadStaticData(name, timeReversed = True)
+    for i, name in enumerate(fileDict):
+        fileName = name + ".tif"
+        print("File "+str(i+1)+": "+fileName)
 
-        channelDict[title] = container(fileName=file, index=i, raw=ar)
+        try:
+            ar = transients.LoadTimeData(fileDict[name], timeReversed = True)
+            static = False
+        except:
+            ar = transients.LoadStaticData(fileDict[name], timeReversed = True)
+            static = True
+
+        channelDict[name] = container(fileName=fileName, index=i, raw=ar, static=static)
 
     return channelDict
 
 
 # Multi-procceses Cellpose with all channels
-def multiProcess(channelDict: dict) -> dict:
+def multiProcess(channelDict: dict, lastFrame: bool) -> dict:
     dataSet = []
 
     for channel in channelDict.values():
-        if (channel.fileName == "mCherry.tif"):
-            dataSet.append(channel.raw[0, :, :])
+        if (channel.static == False):
+            if (lastFrame == True):
+                lastFrame = len(channel.raw) - 1
+                dataSet.append(channel.raw[lastFrame, :, :])
+            else:
+                dataSet.append(channel.raw[0, :, :])
         else:
             dataSet.append(channel.raw)
 
@@ -164,21 +147,14 @@ def normalizeData(dataSet) -> []:
     return normalized
 
 
-# Transposes data and exports to xlsx sheet
-def exportData(sheet, dataSet, title, count):
+# Transpose data set for xlsx export
+def transposeData(dataSet) -> []:
     dataSet = np.array(dataSet)
     dataSet = dataSet.T
-
-    for i, sublist in enumerate(dataSet):
-        for j, item in enumerate(sublist):
-            header = sheet.cell(row = 1, column = (j*4)+count)
-            header.value = (str(title) + str(j+1))
-
-            cell = sheet.cell(row = i+2, column = (j*4)+count)
-            cell.value = item
+    return dataSet
 
 
-# Save cells segmenation img
+# Save one cell segmenation img
 def saveCellImg(mask, path):
     plt.figure(figsize=(60,30))
     ax1 = plt.subplot(131)
@@ -198,82 +174,84 @@ def saveCellImg(mask, path):
     plt.savefig(path, bbox_inches='tight')
 
 
-# Runs program on two channels
-def processTwoChannels(channels: dict, measuredName: str) -> dict:
-    # References
-    MCHERRY = channels['mCherry']
-    STATIC = channels[measuredName]
-
-    # Get masks
-    channels = multiProcess(channels)
+# Saves cell segrementation images from all channels to one .png
+def saveCellImgs(channels, path):
+    fig = plt.figure(figsize=(60, 30))
+    fig.set_facecolor('white')
+    number_of_channels = len(channels)
     
-    # Convert masks to binary
-    for key, channel in channels.items():
-        channel.binaryMask = np.zeros_like(channel.mask, int)
-        channel.binaryMask[channel.mask > 0] = 1
+    for i, key in enumerate(channels.keys()):
+        channel = channels[key]
+        if (channel.static == True):
+            continue
+        mask = channel.mask
+        ax = fig.add_subplot(1, number_of_channels, i+1)
+        ax.set_title(str(key))
+        ax.imshow(mask)
+        labels = []
 
-    # Select cells
-    combo_BinaryMask = STATIC.binaryMask + MCHERRY.binaryMask
-    MCHERRY.mask = runCellpose(combo_BinaryMask)
+        #Label cells
+        for i in range(mask.shape[0]):
+            for j in range(mask.shape[1]):
+                if (mask[i][j] == 0):
+                    continue
+                else:
+                    if (mask[i][j] not in labels):
+                        labels.append(mask[i][j])
+                        ax.text(j, i, int(mask[i][j]), ha="center", va="center", fontsize=12, fontweight='black', color='orange')
 
-    final_BinaryMask = np.zeros_like(MCHERRY.mask, int)
-    final_BinaryMask[MCHERRY.mask > 0] = 1
-
-    dataSet = final_BinaryMask * MCHERRY.raw
-    STATIC_values = final_BinaryMask * STATIC.raw
-    cellCount = np.max(final_BinaryMask * MCHERRY.mask)
-
-    MCHERRY.region_cells = getRegionCells(MCHERRY.mask, cellCount)
-
-    # Time series data
-    traces, region_cells = transients.GetTraces(dataSet, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    MCHERRY.traces = traces
-
-    # Static channel values
-    traces, region_cells = transients.GetTraces(STATIC_values, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    STATIC.traces = traces
-
-    return channels
+    plt.savefig(path, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
 
 
-# Runs program on three channels
-def processThreeChannels(channels: dict, measuredName: str) -> dict:
-    # References    
-    for i in channels:
-        if (i == 'mCherry'):
-            MCHERRY = channels[i]
-        elif (i == measuredName):
-            MEASURED = channels[i]
-        else:
-            STATIC = channels[i]
-        
+# Exports traces to xlsx sheet
+def exportData(sheet, dataSet, title, count):
+    for i, sublist in enumerate(dataSet):
+        for j, item in enumerate(sublist):
+            header = sheet.cell(row = 1, column = (j*5)+count)
+            header.value = (str(title) + str(j+1))
+
+            cell = sheet.cell(row = i+2, column = (j*5)+count)
+            cell.value = item
+
+
+# Export average cell flourescence value to xlsx sheet
+def exportStaticData(sheet, dataSet, title, count):
+    for i, value in enumerate(dataSet):
+        header = sheet.cell(row = 1, column = (i*5)+count)
+        header.value = (str(title) + str(i+1))
+
+        cell = sheet.cell(row = 2, column = (i*5)+count)
+        cell.value = value
+
+
+# Runs program on two channels
+def processChannelData(channels: dict) -> dict:
     # Get masks
-    channels = multiProcess(channels)
+    channels = multiProcess(channels, lastFrame=True)
+    combo_BinaryMask = np.zeros_like(channels[list(channels.keys())[0]].mask, int)
 
-    # Convert masks to binary
+    # Binary mask
     for key, channel in channels.items():
         channel.binaryMask = np.zeros_like(channel.mask, int)
         channel.binaryMask[channel.mask > 0] = 1
+        combo_BinaryMask = combo_BinaryMask + channel.binaryMask
+    
+    # Combined mask from all channels
+    combo_mask = runCellpose(combo_BinaryMask)
 
-    # Select cells
-    combo_BinaryMask = STATIC.binaryMask + MEASURED.binaryMask + MCHERRY.binaryMask
-    MCHERRY.mask = runCellpose(combo_BinaryMask)
+    final_BinaryMask = np.zeros_like(combo_mask, int)
+    final_BinaryMask[combo_mask > 0] = 1
 
-    final_BinaryMask = np.zeros_like(MCHERRY.mask, int)
-    final_BinaryMask[MCHERRY.mask > 0] = 1
+    cellCount = np.max(final_BinaryMask * combo_mask)
+    region_cells = getRegionCells(combo_mask, cellCount)
 
-    dataSet = final_BinaryMask * MCHERRY.raw
-    MEASURED_values = final_BinaryMask * MEASURED.raw
-    cellCount = np.max(final_BinaryMask * MCHERRY.mask)
-
-    MCHERRY.region_cells = getRegionCells(MCHERRY.mask, cellCount)
-
-    # Time series data
-    traces, region_cells = transients.GetTraces(dataSet, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    MCHERRY.traces = traces
-
-    # Static channel values
-    traces, region_cells = transients.GetTraces(MEASURED_values, final_BinaryMask, region_cells=MCHERRY.region_cells)
-    MEASURED.traces = traces
+    # Cell traces
+    for key, channel in channels.items():
+        channel.mask = combo_mask
+        
+        # Raw flourescence data of selected cells
+        channel.data = final_BinaryMask * channel.raw
+        traces, region_cells_master = transients.GetTraces(channel.data, final_BinaryMask, region_cells=region_cells)
+        channel.traces = traces
 
     return channels
